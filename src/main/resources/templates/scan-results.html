@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{layout/main :: head('Scan Results')}"></head>
+<body>
+    <nav th:replace="~{layout/main :: navbar}"></nav>
+
+    <main class="container page-content">
+        <div class="page-header">
+            <h1>Network Scans</h1>
+            <form th:action="@{/scan/start}" method="post">
+                <button type="submit" class="btn btn-primary" id="start-scan-btn"
+                        th:disabled="${scanInProgress}">
+                    <span th:if="${scanInProgress}" class="scan-spinner"></span>
+                    <span th:text="${scanInProgress} ? 'Scanning...' : 'Start Scan'">Start Scan</span>
+                </button>
+            </form>
+        </div>
+
+        <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+        <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+        <div id="scan-status" th:if="${scanInProgress}">
+            <div class="scan-animation">
+                <div class="scan-spinner"></div>
+                <span class="scan-text">Network scan in progress...</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Scan History</h3>
+            </div>
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Type</th>
+                            <th>Started</th>
+                            <th>Duration</th>
+                            <th>Status</th>
+                            <th>Devices Found</th>
+                            <th>New Devices</th>
+                            <th>Network Range</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="scan : ${recentScans}">
+                            <td>
+                                <a th:href="@{/scan/{id}(id=${scan.id})}" th:text="'#' + ${scan.id}">#1</a>
+                            </td>
+                            <td>
+                                <span th:text="${scan.scanType}"
+                                      th:class="${scan.scanType == 'MANUAL'} ? 'text-cyan' : 'text-magenta'">Manual</span>
+                            </td>
+                            <td th:text="${#temporals.format(scan.startedAt, 'yyyy-MM-dd HH:mm:ss')}">Date</td>
+                            <td th:text="${scan.completedAt != null} ? ${scan.durationSeconds + 's'} : '-'">0s</td>
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${scan.status == 'COMPLETED'} ? 'badge-online' : (${scan.status == 'RUNNING'} ? 'badge-warning' : 'badge-unknown')"
+                                      th:text="${scan.status}">Status</span>
+                            </td>
+                            <td th:text="${scan.devicesFound}">0</td>
+                            <td th:classappend="${scan.newDevices > 0} ? 'text-orange' : ''" th:text="${scan.newDevices}">0</td>
+                            <td th:text="${scan.networkRange}">192.168.1.0/24</td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(recentScans)}">
+                            <td colspan="8" class="text-center text-muted">No scans recorded yet. Start your first scan!</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <footer th:replace="~{layout/main :: footer}"></footer>
+    <script th:src="@{/js/app.js}"></script>
+</body>
+</html>

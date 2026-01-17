@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title} + ' - K2SO Watcher'">K2SO Watcher</title>
+    <link rel="stylesheet" th:href="@{/css/neon-dark.css}">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+</head>
+<body>
+
+<nav class="navbar" th:fragment="navbar">
+    <div class="navbar-content">
+        <a href="/dashboard" class="navbar-brand">K2<span>SO</span></a>
+        <ul class="navbar-nav">
+            <li><a th:href="@{/dashboard}" th:classappend="${activePage == 'dashboard'} ? 'active' : ''">Dashboard</a></li>
+            <li><a th:href="@{/devices}" th:classappend="${activePage == 'devices'} ? 'active' : ''">Devices</a></li>
+            <li><a th:href="@{/scan}" th:classappend="${activePage == 'scan'} ? 'active' : ''">Scans</a></li>
+            <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/users}" th:classappend="${activePage == 'admin'} ? 'active' : ''">Admin</a></li>
+        </ul>
+        <div class="navbar-user">
+            <span class="user-info" sec:authentication="name">User</span>
+            <form th:action="@{/logout}" method="post" style="display:inline;">
+                <button type="submit" class="btn btn-secondary btn-sm">Logout</button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<main class="container page-content" th:fragment="content">
+    <!-- Page content goes here -->
+</main>
+
+<footer class="footer" th:fragment="footer">
+    <p>K2SO Watcher &copy; 2024 - Network Security Monitoring</p>
+</footer>
+
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

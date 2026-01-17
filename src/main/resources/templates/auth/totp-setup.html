@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup 2FA - K2SO Watcher</title>
+    <link rel="stylesheet" th:href="@{/css/neon-dark.css}">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-box" style="max-width: 500px;">
+            <div class="login-logo">K2<span>SO</span></div>
+            <h2 class="text-center mb-3">Setup Two-Factor Authentication</h2>
+
+            <div th:if="${error}" class="alert alert-danger" th:text="${error}">
+                Error message
+            </div>
+
+            <p class="text-muted text-center">
+                Scan the QR code below with your authenticator app (Google Authenticator, Authy, etc.)
+            </p>
+
+            <div class="qr-code-container text-center">
+                <img th:src="${qrCode}" alt="QR Code for TOTP setup">
+            </div>
+
+            <p class="text-muted text-center mb-2">Or enter this key manually:</p>
+            <div class="manual-key text-center" th:text="${manualKey}">
+                ABCD EFGH IJKL MNOP
+            </div>
+
+            <form th:action="@{/totp-setup}" method="post" class="mt-3">
+                <div class="form-group">
+                    <label class="form-label" for="code">Verification Code</label>
+                    <input type="text" id="code" name="code" class="form-control text-center"
+                           placeholder="Enter 6-digit code" maxlength="6"
+                           pattern="[0-9]{6}" required autofocus
+                           style="font-size: 1.5rem; letter-spacing: 0.5rem;">
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">
+                    Verify &amp; Enable 2FA
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script th:src="@{/js/app.js}"></script>
+</body>
+</html>

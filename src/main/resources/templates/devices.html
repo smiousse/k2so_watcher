@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{layout/main :: head('Devices')}"></head>
+<body>
+    <nav th:replace="~{layout/main :: navbar}"></nav>
+
+    <main class="container page-content">
+        <div class="page-header">
+            <h1>Network Devices</h1>
+        </div>
+
+        <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+        <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+        <!-- Filter Tabs -->
+        <div class="filter-tabs">
+            <a th:href="@{/devices}" class="filter-tab" th:classappend="${currentFilter == 'all'} ? 'active' : ''">
+                All Devices
+            </a>
+            <a th:href="@{/devices(filter='online')}" class="filter-tab" th:classappend="${currentFilter == 'online'} ? 'active' : ''">
+                Online
+            </a>
+            <a th:href="@{/devices(filter='unknown')}" class="filter-tab" th:classappend="${currentFilter == 'unknown'} ? 'active' : ''">
+                Unknown
+            </a>
+        </div>
+
+        <div class="card">
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>MAC Address</th>
+                            <th>IP Address</th>
+                            <th>Vendor</th>
+                            <th>Last Seen</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="device : ${devices}">
+                            <td>
+                                <span th:if="${device.online}" class="badge badge-online">Online</span>
+                                <span th:unless="${device.online}" class="badge badge-offline">Offline</span>
+                            </td>
+                            <td>
+                                <a th:href="@{/devices/{id}(id=${device.id})}">
+                                    <span th:text="${device.displayName}">Device Name</span>
+                                </a>
+                                <span class="badge badge-trusted" th:if="${device.trusted}">Trusted</span>
+                                <span class="badge badge-unknown" th:if="${!device.known}">New</span>
+                            </td>
+                            <td th:text="${device.deviceType.displayName}">Unknown</td>
+                            <td th:text="${device.macAddress}">00:00:00:00:00:00</td>
+                            <td th:text="${device.ipAddress ?: '-'}">192.168.1.1</td>
+                            <td th:text="${device.vendor ?: 'Unknown'}">Vendor</td>
+                            <td th:text="${device.lastSeen != null} ? ${#temporals.format(device.lastSeen, 'yyyy-MM-dd HH:mm')} : 'Never'">Date</td>
+                            <td>
+                                <div class="d-flex gap-1">
+                                    <a th:href="@{/devices/{id}(id=${device.id})}" class="btn btn-secondary btn-sm">View</a>
+                                    <form th:if="${!device.known}" th:action="@{/devices/{id}/mark-known(id=${device.id})}" method="post" style="display: inline;">
+                                        <button type="submit" class="btn btn-success btn-sm">Mark Known</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(devices)}">
+                            <td colspan="8" class="text-center text-muted">No devices found</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <footer th:replace="~{layout/main :: footer}"></footer>
+    <script th:src="@{/js/app.js}"></script>
+</body>
+</html>

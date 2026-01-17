@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{layout/main :: head('Application Settings')}"></head>
+<body>
+    <nav th:replace="~{layout/main :: navbar}"></nav>
+
+    <main class="container page-content">
+        <div class="page-header">
+            <h1>Application Settings</h1>
+        </div>
+
+        <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+        <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+        <div class="filter-tabs mb-3">
+            <a th:href="@{/admin/users}" class="filter-tab">Users</a>
+            <a th:href="@{/admin/settings}" class="filter-tab active">Settings</a>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Configuration</h3>
+            </div>
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Setting</th>
+                            <th>Value</th>
+                            <th>Description</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="setting : ${settings}">
+                            <td>
+                                <code th:text="${setting.key}">setting.key</code>
+                            </td>
+                            <td>
+                                <form th:action="@{/admin/settings/update}" method="post" class="d-flex gap-1">
+                                    <input type="hidden" name="key" th:value="${setting.key}">
+                                    <input type="text" name="value" class="form-control" th:value="${setting.value}"
+                                           style="max-width: 300px;">
+                                    <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                                </form>
+                            </td>
+                            <td class="text-muted" th:text="${setting.description}">Description</td>
+                            <td>
+                                <span class="text-muted" th:if="${setting.updatedAt}"
+                                      th:text="'Updated: ' + ${#temporals.format(setting.updatedAt, 'yyyy-MM-dd HH:mm')}">
+                                    Last updated
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">System Information</h3>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Java Version</span>
+                <span class="info-value" th:text="${javaVersion}">17</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Operating System</span>
+                <span class="info-value" th:text="${osInfo}">Linux</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Application Version</span>
+                <span class="info-value">1.0.0</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Backup &amp; Restore</h3>
+            </div>
+
+            <div style="padding: 1rem;">
+                <div class="d-flex gap-2 mb-3">
+                    <form th:action="@{/admin/backup/create}" method="post" style="display: inline;">
+                        <button type="submit" class="btn btn-primary">
+                            Create Backup
+                        </button>
+                    </form>
+                    <button type="button" class="btn btn-secondary" onclick="openModal('restore-modal')">
+                        Restore from Backup
+                    </button>
+                </div>
+
+                <p class="text-muted mb-2">
+                    Backups include all data: users, devices, scan history, and settings.
+                </p>
+            </div>
+
+            <div th:if="${backups != null and !backups.isEmpty()}">
+                <div class="card-header" style="border-top: 1px solid var(--border-color);">
+                    <h4 style="margin: 0; font-size: 1rem;">Available Backups</h4>
+                </div>
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Filename</th>
+                                <th>Size</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="backup : ${backups}">
+                                <td>
+                                    <code th:text="${backup.filename}">backup.zip</code>
+                                </td>
+                                <td th:text="${backup.sizeFormatted}">1.5 MB</td>
+                                <td th:text="${backup.createdAtFormatted}">2024-01-01 12:00:00</td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        <a th:href="@{/admin/backup/download/{filename}(filename=${backup.filename})}"
+                                           class="btn btn-secondary btn-sm">Download</a>
+                                        <form th:action="@{/admin/backup/delete/{filename}(filename=${backup.filename})}"
+                                              method="post" style="display: inline;"
+                                              onsubmit="return confirm('Delete this backup?');">
+                                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div th:if="${backups == null or backups.isEmpty()}" style="padding: 1rem;">
+                <p class="text-muted">No backups available. Create your first backup above.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Restore Backup Modal -->
+    <div id="restore-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Restore from Backup</h3>
+                <button class="modal-close" onclick="closeModal('restore-modal')">&times;</button>
+            </div>
+            <form th:action="@{/admin/backup/restore}" method="post" enctype="multipart/form-data">
+                <div class="alert alert-danger" style="margin-bottom: 1rem;">
+                    <strong>Warning:</strong> Restoring a backup will replace ALL current data including users, devices, and settings. You will be logged out after the restore completes.
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="backupFile">Select Backup File (.zip)</label>
+                    <input type="file" id="backupFile" name="backupFile" class="form-control"
+                           accept=".zip" required>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-danger"
+                            onclick="return confirm('Are you sure? This will replace all current data!');">
+                        Restore Backup
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('restore-modal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <footer th:replace="~{layout/main :: footer}"></footer>
+    <script th:src="@{/js/app.js}"></script>
+</body>
+</html>

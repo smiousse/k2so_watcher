@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{layout/main :: head('Dashboard')}"></head>
+<body>
+    <nav th:replace="~{layout/main :: navbar}"></nav>
+
+    <main class="container page-content" id="dashboard">
+        <div class="page-header">
+            <h1>Network Dashboard</h1>
+            <div class="d-flex gap-2">
+                <form th:action="@{/scan/start}" method="post" style="display: inline;">
+                    <button type="submit" class="btn btn-primary" id="start-scan-btn"
+                            th:disabled="${scanInProgress}">
+                        <span th:if="${scanInProgress}" class="scan-spinner"></span>
+                        <span th:text="${scanInProgress} ? 'Scanning...' : 'Start Scan'">Start Scan</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div id="scan-status" th:if="${scanInProgress}">
+            <div class="scan-animation">
+                <div class="scan-spinner"></div>
+                <span class="scan-text">Network scan in progress...</span>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="total-devices" th:text="${totalDevices}">0</div>
+                <div class="stat-label">Total Devices</div>
+            </div>
+            <div class="stat-card online">
+                <div class="stat-value" id="online-devices" th:text="${onlineDevices}">0</div>
+                <div class="stat-label">Online Now</div>
+            </div>
+            <div class="stat-card" th:classappend="${unknownDevices > 0} ? 'warning' : ''">
+                <div class="stat-value" id="unknown-devices" th:text="${unknownDevices}">0</div>
+                <div class="stat-label">Unknown Devices</div>
+            </div>
+        </div>
+
+        <!-- Pinned Devices / Quick Access -->
+        <div class="card" th:if="${pinnedDevices != null and !pinnedDevices.isEmpty()}">
+            <div class="card-header">
+                <h3 class="card-title">Quick Access</h3>
+            </div>
+            <div class="pinned-devices-grid">
+                <div th:each="device : ${pinnedDevices}" class="pinned-device-card">
+                    <div class="pinned-device-icon">
+                        <span th:text="${device.deviceType.icon}">device</span>
+                    </div>
+                    <div class="pinned-device-info">
+                        <div class="pinned-device-name" th:text="${device.displayName}">Device Name</div>
+                        <div class="pinned-device-ip" th:text="${device.ipAddress}">192.168.1.1</div>
+                        <span th:if="${device.online}" class="badge badge-online" style="font-size: 0.7rem;">Online</span>
+                        <span th:unless="${device.online}" class="badge badge-offline" style="font-size: 0.7rem;">Offline</span>
+                    </div>
+                    <div class="pinned-device-actions">
+                        <a th:if="${device.fullServiceUrl}" th:href="${device.fullServiceUrl}"
+                           target="_blank" class="btn btn-primary btn-sm">Open</a>
+                        <a th:href="@{/devices/{id}(id=${device.id})}" class="btn btn-secondary btn-sm">Details</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Last Scan Info -->
+        <div class="card" th:if="${lastScan}">
+            <div class="card-header">
+                <h3 class="card-title">Last Scan</h3>
+                <span class="badge" th:classappend="${lastScan.status == 'COMPLETED'} ? 'badge-online' : 'badge-warning'"
+                      th:text="${lastScan.status}">Status</span>
+            </div>
+            <div class="d-flex justify-content-between">
+                <div>
+                    <span class="text-muted">Started:</span>
+                    <span th:text="${#temporals.format(lastScan.startedAt, 'yyyy-MM-dd HH:mm')}">Time</span>
+                </div>
+                <div>
+                    <span class="text-muted">Devices Found:</span>
+                    <span th:text="${lastScan.devicesFound}">0</span>
+                </div>
+                <div>
+                    <span class="text-muted">New Devices:</span>
+                    <span th:text="${lastScan.newDevices}" th:classappend="${lastScan.newDevices > 0} ? 'text-orange' : ''">0</span>
+                </div>
+                <div th:if="${lastScan.completedAt}">
+                    <span class="text-muted">Duration:</span>
+                    <span th:text="${lastScan.durationSeconds} + 's'">0s</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="device-grid">
+            <!-- Unknown Devices Alert -->
+            <div class="card" th:if="${not #lists.isEmpty(unknownDeviceList)}">
+                <div class="card-header">
+                    <h3 class="card-title text-orange">Potential Intruders</h3>
+                    <a th:href="@{/devices(filter='unknown')}" class="btn btn-secondary btn-sm">View All</a>
+                </div>
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Device</th>
+                                <th>MAC Address</th>
+                                <th>IP Address</th>
+                                <th>First Seen</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="device : ${unknownDeviceList}" th:if="${#lists.size(unknownDeviceList) <= 5 or deviceStat.index < 5}">
+                                <td>
+                                    <span th:text="${device.displayName}">Unknown</span>
+                                    <span class="badge badge-unknown" th:if="${device.vendor != 'Unknown'}" th:text="${device.vendor}">Vendor</span>
+                                </td>
+                                <td th:text="${device.macAddress}">00:00:00:00:00:00</td>
+                                <td th:text="${device.ipAddress}">192.168.1.1</td>
+                                <td th:text="${#temporals.format(device.firstSeen, 'MM-dd HH:mm')}">Date</td>
+                                <td>
+                                    <form th:action="@{/devices/{id}/mark-known(id=${device.id})}" method="post" style="display: inline;">
+                                        <button type="submit" class="btn btn-success btn-sm">Mark Known</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Online Devices -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Online Devices</h3>
+                    <a th:href="@{/devices(filter='online')}" class="btn btn-secondary btn-sm">View All</a>
+                </div>
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Device</th>
+                                <th>Type</th>
+                                <th>IP Address</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="device, deviceStat : ${onlineDeviceList}" th:if="${deviceStat.index < 10}">
+                                <td>
+                                    <a th:href="@{/devices/{id}(id=${device.id})}" th:text="${device.displayName}">Device</a>
+                                </td>
+                                <td th:text="${device.deviceType.displayName}">Unknown</td>
+                                <td th:text="${device.ipAddress}">192.168.1.1</td>
+                                <td>
+                                    <span class="badge badge-online">Online</span>
+                                    <span class="badge badge-trusted" th:if="${device.trusted}">Trusted</span>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(onlineDeviceList)}">
+                                <td colspan="4" class="text-center text-muted">No devices online</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer th:replace="~{layout/main :: footer}"></footer>
+    <script th:src="@{/js/app.js}"></script>
+</body>
+</html>

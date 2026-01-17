@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{layout/main :: head('Scan Detail')}"></head>
+<body>
+    <nav th:replace="~{layout/main :: navbar}"></nav>
+
+    <main class="container page-content">
+        <div class="page-header">
+            <h1>Scan #<span th:text="${scan.id}">1</span> Details</h1>
+            <a th:href="@{/scan}" class="btn btn-secondary">Back to Scans</a>
+        </div>
+
+        <!-- Scan Info -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Scan Information</h3>
+                <span class="badge"
+                      th:classappend="${scan.status == 'COMPLETED'} ? 'badge-online' : (${scan.status == 'RUNNING'} ? 'badge-warning' : 'badge-unknown')"
+                      th:text="${scan.status}">Status</span>
+            </div>
+            <div class="device-grid">
+                <div>
+                    <div class="info-row">
+                        <span class="info-label">Scan Type</span>
+                        <span class="info-value" th:text="${scan.scanType}">Manual</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Network Range</span>
+                        <span class="info-value" th:text="${scan.networkRange}">192.168.1.0/24</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Started At</span>
+                        <span class="info-value" th:text="${#temporals.format(scan.startedAt, 'yyyy-MM-dd HH:mm:ss')}">Date</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="info-row">
+                        <span class="info-label">Completed At</span>
+                        <span class="info-value" th:text="${scan.completedAt != null} ? ${#temporals.format(scan.completedAt, 'yyyy-MM-dd HH:mm:ss')} : 'In Progress'">Date</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Duration</span>
+                        <span class="info-value" th:text="${scan.completedAt != null} ? ${scan.durationSeconds + ' seconds'} : '-'">0s</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Devices Found</span>
+                        <span class="info-value" th:text="${scan.devicesFound}">0</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">New Devices</span>
+                        <span class="info-value" th:classappend="${scan.newDevices > 0} ? 'text-orange' : ''" th:text="${scan.newDevices}">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div th:if="${scan.errorMessage}" class="alert alert-danger mt-3" th:text="${scan.errorMessage}">
+                Error message
+            </div>
+        </div>
+
+        <!-- Scan Log -->
+        <div class="card" th:if="${scan.scanLog != null and !scan.scanLog.isEmpty()}">
+            <div class="card-header">
+                <h3 class="card-title">Scan Log</h3>
+                <span class="badge" th:text="${scan.scannerTool ?: 'unknown'}">tool</span>
+            </div>
+            <div class="scan-log-container">
+                <pre class="scan-log" th:text="${scan.scanLog}">Scan output will appear here...</pre>
+            </div>
+        </div>
+
+        <!-- Discovered Devices -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Discovered Devices</h3>
+            </div>
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>MAC Address</th>
+                            <th>IP Address</th>
+                            <th>Hostname</th>
+                            <th>Vendor</th>
+                            <th>Detected At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="result : ${results}">
+                            <td>
+                                <span th:if="${result.newDevice}" class="badge badge-unknown">New</span>
+                                <span th:unless="${result.newDevice}" class="badge badge-online">Known</span>
+                            </td>
+                            <td>
+                                <a th:if="${result.device}" th:href="@{/devices/{id}(id=${result.device.id})}"
+                                   th:text="${result.macAddress}">00:00:00:00:00:00</a>
+                                <span th:unless="${result.device}" th:text="${result.macAddress}">00:00:00:00:00:00</span>
+                            </td>
+                            <td th:text="${result.ipAddress ?: '-'}">192.168.1.1</td>
+                            <td th:text="${result.hostname ?: '-'}">hostname</td>
+                            <td th:text="${result.vendor ?: 'Unknown'}">Vendor</td>
+                            <td th:text="${#temporals.format(result.detectedAt, 'HH:mm:ss')}">Time</td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(results)}">
+                            <td colspan="6" class="text-center text-muted">No devices discovered in this scan</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <footer th:replace="~{layout/main :: footer}"></footer>
+    <script th:src="@{/js/app.js}"></script>
+</body>
+</html>
