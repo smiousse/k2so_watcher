@@ -7,8 +7,8 @@ services:
     # Network mode host is required for network scanning to work properly
     network_mode: host
     # Alternatively, if you don't want host mode, you can use:
-    # ports:
-    #   - "8080:8080"
+    #ports:
+    #  - "8080:8080"
     volumes:
       # Persist H2 database
       - k2so-data:/app/data
@@ -17,7 +17,7 @@ services:
       - TZ=America/New_York
 
       # Server Configuration
-      - SERVER_PORT=8080
+      - SERVER_PORT=7070
 
       # Database Configuration
       - DB_PATH=/app/data/k2so_watcher

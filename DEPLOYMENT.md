@@ -46,25 +46,28 @@ Choose one of the following methods:
 ```yaml
 services:
   k2so-watcher:
-    image: ghcr.io/your-username/k2so-watcher:latest  # Or build from source
+    image: ghcr.io/smiousse/k2so_watcher:latest  # Or build from source
     build:
-      context: https://github.com/your-username/k2so-watcher.git
+      context: https://github.com/smiousse/k2so_watcher.git
       dockerfile: Dockerfile
     container_name: k2so-watcher
     network_mode: host
+    ports:
+      - 7777:8080
     volumes:
       - k2so-data:/app/data
       - k2so-backups:/app/backups
     environment:
       - SERVER_PORT=8080
       - ADMIN_USERNAME=admin
-      - ADMIN_PASSWORD=admin
-      - NETWORK_SCAN_RANGE=192.168.1.0/24
-      - SCANNER_TOOL=arp-scan
+      - ADMIN_PASSWORD=Rjb5p9rw!
+      - NETWORK_SCAN_RANGE=10.40.30.0/24
+      - SCANNER_TOOL=nmap
       - SCHEDULER_ENABLED=true
       - SCHEDULER_CRON=0 0 2 * * *
       - AI_ENABLED=false
-      - JAVA_OPTS=-Xmx512m -Xms256m
+      - JAVA_OPTS=-Xmx512m -Xms256m -Duser.timezone=America/New_York
+      - TZ=America/New_York
     cap_add:
       - NET_RAW
       - NET_ADMIN

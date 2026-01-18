@@ -2,6 +2,8 @@ package com.k2so.watcher.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "devices")
@@ -27,7 +29,7 @@ public class Device {
     private String vendor;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "device_type")
+    @Column(name = "device_type", columnDefinition = "VARCHAR(50)")
     private DeviceType deviceType = DeviceType.UNKNOWN;
 
     @Column(name = "connection_type")
@@ -68,6 +70,9 @@ public class Device {
 
     @Column(name = "service_url")
     private String serviceUrl;
+
+    @OneToMany(mappedBy = "device", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    private List<DeviceServiceUrl> serviceUrls = new ArrayList<>();
 
     @Column(name = "is_pinned")
     private boolean pinned = false;
@@ -237,6 +242,24 @@ public class Device {
 
     public void setServiceUrl(String serviceUrl) {
         this.serviceUrl = serviceUrl;
+    }
+
+    public List<DeviceServiceUrl> getServiceUrls() {
+        return serviceUrls;
+    }
+
+    public void setServiceUrls(List<DeviceServiceUrl> serviceUrls) {
+        this.serviceUrls = serviceUrls;
+    }
+
+    public void addServiceUrl(DeviceServiceUrl serviceUrl) {
+        serviceUrls.add(serviceUrl);
+        serviceUrl.setDevice(this);
+    }
+
+    public void removeServiceUrl(DeviceServiceUrl serviceUrl) {
+        serviceUrls.remove(serviceUrl);
+        serviceUrl.setDevice(null);
     }
 
     public boolean isPinned() {

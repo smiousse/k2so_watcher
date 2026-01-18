@@ -27,6 +27,13 @@ public class AppSettingsService {
         createIfNotExists("ai.enabled", "false", "Enable AI-powered device identification");
         createIfNotExists("ai.provider", "openai", "AI provider (openai, claude)");
         createIfNotExists("ai.model", "gpt-4", "AI model to use");
+
+        // LangChain4j settings
+        createIfNotExists("langchain4j.provider", "gemini", "LangChain4j provider (groq, gemini)");
+        createIfNotExists("langchain4j.groq.api-key", "", "Groq API key");
+        createIfNotExists("langchain4j.groq.model", "llama-3.3-70b-versatile", "Groq model name");
+        createIfNotExists("langchain4j.gemini.api-key", "", "Gemini API key");
+        createIfNotExists("langchain4j.gemini.model", "gemini-2.0-flash", "Gemini model name");
     }
 
     private void createIfNotExists(String key, String value, String description) {

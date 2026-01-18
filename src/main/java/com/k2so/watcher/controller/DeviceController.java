@@ -1,9 +1,11 @@
 package com.k2so.watcher.controller;
 
+import com.k2so.watcher.dto.DeviceAnalysisResult;
 import com.k2so.watcher.model.Device;
 import com.k2so.watcher.model.DeviceType;
 import com.k2so.watcher.service.AIIdentificationService;
 import com.k2so.watcher.service.DeviceService;
+import com.k2so.watcher.service.LangChain4jService;
 import com.k2so.watcher.service.NetworkScannerService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -19,13 +21,16 @@ public class DeviceController {
     private final DeviceService deviceService;
     private final AIIdentificationService aiIdentificationService;
     private final NetworkScannerService networkScannerService;
+    private final LangChain4jService langChain4jService;
 
     public DeviceController(DeviceService deviceService,
                            AIIdentificationService aiIdentificationService,
-                           NetworkScannerService networkScannerService) {
+                           NetworkScannerService networkScannerService,
+                           LangChain4jService langChain4jService) {
         this.deviceService = deviceService;
         this.aiIdentificationService = aiIdentificationService;
         this.networkScannerService = networkScannerService;
+        this.langChain4jService = langChain4jService;
     }
 
     @GetMapping
@@ -57,6 +62,7 @@ public class DeviceController {
         model.addAttribute("device", device);
         model.addAttribute("deviceTypes", DeviceType.values());
         model.addAttribute("aiEnabled", aiIdentificationService.isEnabled());
+        model.addAttribute("langChain4jConfigured", langChain4jService.isConfigured());
 
         return "device-detail";
     }
@@ -154,6 +160,106 @@ public class DeviceController {
             redirectAttributes.addFlashAttribute("success", "Deep scan started. This may take a few minutes. Refresh the page to see results.");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Error starting deep scan: " + e.getMessage());
+        }
+
+        return "redirect:/devices/" + id;
+    }
+
+    @PostMapping("/{id}/analyze-deepscan")
+    public String analyzeDeepScan(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            Device device = deviceService.getDeviceById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Device not found"));
+
+            if (device.getDeepScanLog() == null || device.getDeepScanLog().isEmpty()) {
+                redirectAttributes.addFlashAttribute("error", "Cannot analyze: device has no deep scan log. Run a deep scan first.");
+                return "redirect:/devices/" + id;
+            }
+
+            DeviceAnalysisResult result = langChain4jService.analyzeDeepScanLog(device);
+
+            // Update device with AI analysis results
+            if (result.getDeviceType() != null) {
+                device.setDeviceType(result.getDeviceType());
+            }
+            if (result.getSuggestedName() != null && !result.getSuggestedName().isEmpty()) {
+                device.setCustomName(result.getSuggestedName());
+            }
+            if (result.getNotes() != null && !result.getNotes().isEmpty()) {
+                device.setNotes(result.getNotes());
+            }
+
+            deviceService.saveDevice(device);
+            redirectAttributes.addFlashAttribute("success", "AI analysis complete. Device information updated.");
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("error", "AI not configured: " + e.getMessage());
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Error analyzing device: " + e.getMessage());
+        }
+
+        return "redirect:/devices/" + id;
+    }
+
+    // Service URL management endpoints
+
+    @PostMapping("/{id}/services/add")
+    public String addServiceUrl(@PathVariable Long id,
+                               @RequestParam("alias") String alias,
+                               @RequestParam("url") String url,
+                               RedirectAttributes redirectAttributes) {
+        try {
+            if (alias == null || alias.trim().isEmpty()) {
+                redirectAttributes.addFlashAttribute("error", "Service alias is required");
+                return "redirect:/devices/" + id;
+            }
+            if (url == null || url.trim().isEmpty()) {
+                redirectAttributes.addFlashAttribute("error", "Service URL is required");
+                return "redirect:/devices/" + id;
+            }
+
+            deviceService.addServiceUrl(id, alias.trim(), url.trim());
+            redirectAttributes.addFlashAttribute("success", "Service URL added successfully");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Error adding service URL: " + e.getMessage());
+        }
+
+        return "redirect:/devices/" + id;
+    }
+
+    @PostMapping("/{id}/services/{serviceId}/update")
+    public String updateServiceUrl(@PathVariable Long id,
+                                  @PathVariable Long serviceId,
+                                  @RequestParam("alias") String alias,
+                                  @RequestParam("url") String url,
+                                  RedirectAttributes redirectAttributes) {
+        try {
+            if (alias == null || alias.trim().isEmpty()) {
+                redirectAttributes.addFlashAttribute("error", "Service alias is required");
+                return "redirect:/devices/" + id;
+            }
+            if (url == null || url.trim().isEmpty()) {
+                redirectAttributes.addFlashAttribute("error", "Service URL is required");
+                return "redirect:/devices/" + id;
+            }
+
+            deviceService.updateServiceUrlEntry(serviceId, alias.trim(), url.trim());
+            redirectAttributes.addFlashAttribute("success", "Service URL updated successfully");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Error updating service URL: " + e.getMessage());
+        }
+
+        return "redirect:/devices/" + id;
+    }
+
+    @PostMapping("/{id}/services/{serviceId}/delete")
+    public String deleteServiceUrl(@PathVariable Long id,
+                                  @PathVariable Long serviceId,
+                                  RedirectAttributes redirectAttributes) {
+        try {
+            deviceService.deleteServiceUrl(serviceId);
+            redirectAttributes.addFlashAttribute("success", "Service URL deleted successfully");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Error deleting service URL: " + e.getMessage());
         }
 
         return "redirect:/devices/" + id;

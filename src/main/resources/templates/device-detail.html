@@ -24,9 +24,15 @@
                     <span th:if="${device.pinned}" class="badge badge-trusted">Pinned</span>
                 </div>
             </div>
-            <div class="device-header-actions" style="margin-left: auto;">
-                <a th:if="${device.fullServiceUrl}" th:href="${device.fullServiceUrl}"
-                   target="_blank" class="btn btn-primary">
+            <div class="device-header-actions" style="margin-left: auto; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                <!-- Show all service URLs as buttons -->
+                <th:block th:each="svc : ${device.serviceUrls}">
+                    <a th:href="${svc.fullUrl}" target="_blank" class="btn btn-primary"
+                       th:text="${svc.alias}" th:title="${svc.url}">Service</a>
+                </th:block>
+                <!-- Fallback to legacy serviceUrl if no serviceUrls defined -->
+                <a th:if="${device.fullServiceUrl != null and device.serviceUrls.isEmpty()}"
+                   th:href="${device.fullServiceUrl}" target="_blank" class="btn btn-primary">
                     Open Service
                 </a>
                 <form th:action="@{/devices/{id}/toggle-pin(id=${device.id})}" method="post" style="display: inline;">
@@ -100,6 +106,13 @@
                             Deep Scan (nmap -A)
                         </button>
                     </form>
+                    <form th:if="${langChain4jConfigured}" th:action="@{/devices/{id}/analyze-deepscan(id=${device.id})}" method="post" style="display: inline;">
+                        <button type="submit" class="btn btn-secondary"
+                                th:disabled="${device.deepScanLog == null or device.deepScanLog.isEmpty()}"
+                                th:title="${device.deepScanLog == null or device.deepScanLog.isEmpty()} ? 'Run a deep scan first' : 'Analyze deep scan log with AI'">
+                            Analyze with AI
+                        </button>
+                    </form>
                     <form th:if="${aiEnabled}" th:action="@{/devices/{id}/identify-ai(id=${device.id})}" method="post" style="display: inline;">
                         <button type="submit" class="btn btn-secondary">Identify with AI</button>
                     </form>
@@ -151,20 +164,15 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label" for="serviceUrl">Service URL</label>
-                        <input type="text" id="serviceUrl" name="serviceUrl" class="form-control"
-                               th:value="${device.serviceUrl}"
-                               placeholder="e.g., :8080 or /admin or http://192.168.1.100:9000">
-                        <small class="text-muted">Relative path (e.g., :8080, /admin) or full URL. Relative paths use device IP.</small>
-                    </div>
-
-                    <div class="form-group">
                         <div class="form-check">
                             <input type="checkbox" id="pinned" name="pinned" class="form-check-input"
                                    th:checked="${device.pinned}" value="true">
                             <label for="pinned">Pin to Dashboard (for quick access)</label>
                         </div>
                     </div>
+
+                    <!-- Hidden field to preserve legacy serviceUrl -->
+                    <input type="hidden" name="serviceUrl" th:value="${device.serviceUrl}">
 
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">Save Changes</button>
@@ -180,6 +188,120 @@
                 </div>
             </div>
         </div>
+
+        <!-- Service URLs -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h3 class="card-title">Service URLs</h3>
+            </div>
+
+            <!-- Existing Services List -->
+            <div th:if="${!device.serviceUrls.isEmpty()}" class="mb-3">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Alias</th>
+                            <th>URL</th>
+                            <th style="width: 150px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="svc : ${device.serviceUrls}">
+                            <td>
+                                <a th:href="${svc.fullUrl}" target="_blank" th:text="${svc.alias}">Service Name</a>
+                            </td>
+                            <td>
+                                <code th:text="${svc.url}">:8080</code>
+                                <small class="text-muted" th:if="${svc.fullUrl != svc.url}"
+                                       th:text="' → ' + ${svc.fullUrl}"></small>
+                            </td>
+                            <td>
+                                <div class="d-flex gap-1">
+                                    <button type="button" class="btn btn-secondary btn-sm edit-service-btn"
+                                            th:data-id="${svc.id}"
+                                            th:data-alias="${svc.alias}"
+                                            th:data-url="${svc.url}">
+                                        Edit
+                                    </button>
+                                    <form th:action="@{/devices/{id}/services/{svcId}/delete(id=${device.id}, svcId=${svc.id})}"
+                                          method="post" style="display: inline;"
+                                          onsubmit="return confirm('Delete this service URL?');">
+                                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div th:if="${device.serviceUrls.isEmpty()}" class="text-muted mb-3">
+                No service URLs configured. Add one below.
+            </div>
+
+            <!-- Add New Service Form -->
+            <div style="border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                <h4>Add New Service</h4>
+                <form th:action="@{/devices/{id}/services/add(id=${device.id})}" method="post">
+                    <div class="d-flex gap-2 align-items-end">
+                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                            <label class="form-label" for="newAlias">Alias</label>
+                            <input type="text" id="newAlias" name="alias" class="form-control"
+                                   placeholder="e.g., Web UI, API, SSH" required>
+                        </div>
+                        <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                            <label class="form-label" for="newUrl">URL</label>
+                            <input type="text" id="newUrl" name="url" class="form-control"
+                                   placeholder="e.g., :8080 or /admin or http://..." required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add</button>
+                    </div>
+                    <small class="text-muted">Relative paths (e.g., :8080, /admin) will use the device's IP address.</small>
+                </form>
+            </div>
+
+            <!-- Edit Service Modal (hidden by default) -->
+            <div id="editServiceModal" style="display: none; border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 1rem;">
+                <h4>Edit Service</h4>
+                <form id="editServiceForm" method="post">
+                    <div class="d-flex gap-2 align-items-end">
+                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                            <label class="form-label" for="editAlias">Alias</label>
+                            <input type="text" id="editAlias" name="alias" class="form-control" required>
+                        </div>
+                        <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                            <label class="form-label" for="editUrl">URL</label>
+                            <input type="text" id="editUrl" name="url" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                        <button type="button" class="btn btn-secondary" onclick="cancelEdit()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script th:inline="javascript">
+            var deviceId = [[${device.id}]];
+
+            document.addEventListener('DOMContentLoaded', function() {
+                document.querySelectorAll('.edit-service-btn').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        var serviceId = this.getAttribute('data-id');
+                        var alias = this.getAttribute('data-alias');
+                        var url = this.getAttribute('data-url');
+
+                        document.getElementById('editServiceModal').style.display = 'block';
+                        document.getElementById('editAlias').value = alias;
+                        document.getElementById('editUrl').value = url;
+                        document.getElementById('editServiceForm').action = '/devices/' + deviceId + '/services/' + serviceId + '/update';
+                    });
+                });
+            });
+
+            function cancelEdit() {
+                document.getElementById('editServiceModal').style.display = 'none';
+            }
+        </script>
 
         <!-- Deep Scan Log -->
         <div class="card" th:if="${device.deepScanLog != null and !device.deepScanLog.isEmpty()}">

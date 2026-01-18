@@ -1,8 +1,10 @@
 package com.k2so.watcher.service;
 
 import com.k2so.watcher.model.Device;
+import com.k2so.watcher.model.DeviceServiceUrl;
 import com.k2so.watcher.model.DeviceType;
 import com.k2so.watcher.repository.DeviceRepository;
+import com.k2so.watcher.repository.DeviceServiceUrlRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,10 +15,14 @@ import java.util.Optional;
 public class DeviceService {
 
     private final DeviceRepository deviceRepository;
+    private final DeviceServiceUrlRepository deviceServiceUrlRepository;
     private final AIIdentificationService aiIdentificationService;
 
-    public DeviceService(DeviceRepository deviceRepository, AIIdentificationService aiIdentificationService) {
+    public DeviceService(DeviceRepository deviceRepository,
+                        DeviceServiceUrlRepository deviceServiceUrlRepository,
+                        AIIdentificationService aiIdentificationService) {
         this.deviceRepository = deviceRepository;
+        this.deviceServiceUrlRepository = deviceServiceUrlRepository;
         this.aiIdentificationService = aiIdentificationService;
     }
 
@@ -131,5 +137,47 @@ public class DeviceService {
                 .orElseThrow(() -> new IllegalArgumentException("Device not found"));
         device.setServiceUrl(serviceUrl);
         deviceRepository.save(device);
+    }
+
+    @Transactional
+    public Device saveDevice(Device device) {
+        return deviceRepository.save(device);
+    }
+
+    // Service URL management methods
+
+    @Transactional
+    public DeviceServiceUrl addServiceUrl(Long deviceId, String alias, String url) {
+        Device device = deviceRepository.findById(deviceId)
+                .orElseThrow(() -> new IllegalArgumentException("Device not found"));
+
+        DeviceServiceUrl serviceUrl = new DeviceServiceUrl(device, alias, url);
+        device.addServiceUrl(serviceUrl);
+        deviceRepository.save(device);
+
+        return serviceUrl;
+    }
+
+    @Transactional
+    public void updateServiceUrlEntry(Long serviceUrlId, String alias, String url) {
+        DeviceServiceUrl serviceUrl = deviceServiceUrlRepository.findById(serviceUrlId)
+                .orElseThrow(() -> new IllegalArgumentException("Service URL not found"));
+
+        serviceUrl.setAlias(alias);
+        serviceUrl.setUrl(url);
+        deviceServiceUrlRepository.save(serviceUrl);
+    }
+
+    @Transactional
+    public void deleteServiceUrl(Long serviceUrlId) {
+        deviceServiceUrlRepository.deleteById(serviceUrlId);
+    }
+
+    public List<DeviceServiceUrl> getServiceUrls(Long deviceId) {
+        return deviceServiceUrlRepository.findByDeviceIdOrderByAliasAsc(deviceId);
+    }
+
+    public Optional<DeviceServiceUrl> getServiceUrlById(Long serviceUrlId) {
+        return deviceServiceUrlRepository.findById(serviceUrlId);
     }
 }

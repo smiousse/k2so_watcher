@@ -57,10 +57,20 @@
                         <div class="pinned-device-ip" th:text="${device.ipAddress}">192.168.1.1</div>
                         <span th:if="${device.online}" class="badge badge-online" style="font-size: 0.7rem;">Online</span>
                         <span th:unless="${device.online}" class="badge badge-offline" style="font-size: 0.7rem;">Offline</span>
+                        <!-- Services list -->
+                        <ul th:if="${!device.serviceUrls.isEmpty()}" class="pinned-device-services" style="list-style: none; padding: 0; margin: 0.5rem 0 0 0; font-size: 0.85rem;">
+                            <li th:each="svc : ${device.serviceUrls}" style="margin: 0.2rem 0;">
+                                <a th:href="${svc.fullUrl}" target="_blank" th:text="${svc.alias}"
+                                   th:title="${svc.url}" style="color: var(--cyan); text-decoration: none;">Service</a>
+                            </li>
+                        </ul>
+                        <!-- Fallback to legacy serviceUrl if no serviceUrls defined -->
+                        <div th:if="${device.fullServiceUrl != null and device.serviceUrls.isEmpty()}" style="margin-top: 0.5rem;">
+                            <a th:href="${device.fullServiceUrl}" target="_blank"
+                               style="color: var(--cyan); text-decoration: none; font-size: 0.85rem;">Open Service</a>
+                        </div>
                     </div>
                     <div class="pinned-device-actions">
-                        <a th:if="${device.fullServiceUrl}" th:href="${device.fullServiceUrl}"
-                           target="_blank" class="btn btn-primary btn-sm">Open</a>
                         <a th:href="@{/devices/{id}(id=${device.id})}" class="btn btn-secondary btn-sm">Details</a>
                     </div>
                 </div>
