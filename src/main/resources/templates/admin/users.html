@@ -117,6 +117,7 @@
                 <button class="modal-close" onclick="closeModal('edit-user-modal')">&times;</button>
             </div>
             <form id="edit-user-form" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                 <div class="form-group">
                     <label class="form-label" for="edit-username">Username</label>
                     <input type="text" id="edit-username" name="username" class="form-control" required>
@@ -144,6 +145,7 @@
 
             <h4>Change Password</h4>
             <form id="change-password-form" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                 <div class="form-group">
                     <label class="form-label" for="new-password-change">New Password</label>
                     <input type="password" id="new-password-change" name="newPassword" class="form-control" required>
