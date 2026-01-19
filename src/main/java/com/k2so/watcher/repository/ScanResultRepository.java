@@ -14,4 +14,6 @@ public interface ScanResultRepository extends JpaRepository<ScanResult, Long> {
     List<ScanResult> findByDeviceId(Long deviceId);
 
     List<ScanResult> findByNewDeviceTrue();
+
+    void deleteByDeviceId(Long deviceId);
 }

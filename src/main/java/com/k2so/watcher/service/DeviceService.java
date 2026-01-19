@@ -5,6 +5,7 @@ import com.k2so.watcher.model.DeviceServiceUrl;
 import com.k2so.watcher.model.DeviceType;
 import com.k2so.watcher.repository.DeviceRepository;
 import com.k2so.watcher.repository.DeviceServiceUrlRepository;
+import com.k2so.watcher.repository.ScanResultRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,13 +17,16 @@ public class DeviceService {
 
     private final DeviceRepository deviceRepository;
     private final DeviceServiceUrlRepository deviceServiceUrlRepository;
+    private final ScanResultRepository scanResultRepository;
     private final AIIdentificationService aiIdentificationService;
 
     public DeviceService(DeviceRepository deviceRepository,
                         DeviceServiceUrlRepository deviceServiceUrlRepository,
+                        ScanResultRepository scanResultRepository,
                         AIIdentificationService aiIdentificationService) {
         this.deviceRepository = deviceRepository;
         this.deviceServiceUrlRepository = deviceServiceUrlRepository;
+        this.scanResultRepository = scanResultRepository;
         this.aiIdentificationService = aiIdentificationService;
     }
 
@@ -36,6 +40,10 @@ public class DeviceService {
 
     public List<Device> getUnknownDevices() {
         return deviceRepository.findByKnownFalse();
+    }
+
+    public List<Device> getDevicesWithDuplicateIps() {
+        return deviceRepository.findDevicesWithDuplicateIpAddresses();
     }
 
     public Optional<Device> getDeviceById(Long id) {
@@ -83,6 +91,7 @@ public class DeviceService {
 
     @Transactional
     public void deleteDevice(Long id) {
+        scanResultRepository.deleteByDeviceId(id);
         deviceRepository.deleteById(id);
     }
 

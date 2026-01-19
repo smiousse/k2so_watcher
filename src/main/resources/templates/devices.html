@@ -24,6 +24,9 @@
             <a th:href="@{/devices(filter='unknown')}" class="filter-tab" th:classappend="${currentFilter == 'unknown'} ? 'active' : ''">
                 Unknown
             </a>
+            <a th:href="@{/devices(filter='duplicates')}" class="filter-tab" th:classappend="${currentFilter == 'duplicates'} ? 'active' : ''">
+                Duplicate IPs
+            </a>
         </div>
 
         <div class="card">

@@ -36,4 +36,7 @@ public interface DeviceRepository extends JpaRepository<Device, Long> {
     long countUnknownDevices();
 
     List<Device> findByPinnedTrueOrderByCustomNameAsc();
+
+    @Query("SELECT d FROM Device d WHERE d.ipAddress IN (SELECT d2.ipAddress FROM Device d2 WHERE d2.ipAddress IS NOT NULL GROUP BY d2.ipAddress HAVING COUNT(d2) > 1) ORDER BY d.ipAddress")
+    List<Device> findDevicesWithDuplicateIpAddresses();
 }

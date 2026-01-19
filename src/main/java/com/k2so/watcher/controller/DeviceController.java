@@ -43,6 +43,9 @@ public class DeviceController {
         } else if ("unknown".equals(filter)) {
             devices = deviceService.getUnknownDevices();
             model.addAttribute("currentFilter", "unknown");
+        } else if ("duplicates".equals(filter)) {
+            devices = deviceService.getDevicesWithDuplicateIps();
+            model.addAttribute("currentFilter", "duplicates");
         } else {
             devices = deviceService.getAllDevices();
             model.addAttribute("currentFilter", "all");
