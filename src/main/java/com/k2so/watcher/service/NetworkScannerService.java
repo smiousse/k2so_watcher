@@ -118,7 +118,10 @@ public class NetworkScannerService {
             scan.setScanLog(scanLogBuilder.toString());
 
             int newDevices = 0;
+            int skippedDevices = 0;
             Set<String> processedMacs = new HashSet<>();
+            Set<String> processedIps = new HashSet<>();
+            StringBuilder skippedLog = new StringBuilder();
 
             for (Map<String, String> host : discoveredHosts) {
                 String macAddress = host.get("mac");
@@ -127,6 +130,12 @@ public class NetworkScannerService {
                 String scannedVendor = host.get("vendor");
 
                 if (ipAddress == null || ipAddress.isEmpty()) {
+                    continue;
+                }
+
+                // Skip if we've already processed this IP in this scan
+                if (processedIps.contains(ipAddress)) {
+                    logger.debug("Skipping duplicate IP address in scan results: {}", ipAddress);
                     continue;
                 }
 
@@ -149,23 +158,29 @@ public class NetworkScannerService {
                     device = deviceRepository.findByMacAddress(macAddress).orElse(null);
                 }
 
-                if (device == null) {
-                    // Try to find by IP address (for cross-VLAN devices without MAC)
-                    deviceByIp = deviceRepository.findByIpAddress(ipAddress).orElse(null);
+                // Check if IP already exists in database
+                deviceByIp = deviceRepository.findByIpAddress(ipAddress).orElse(null);
 
-                    // Only use the device found by IP if it won't cause a MAC conflict
-                    if (deviceByIp != null) {
-                        if (!hasMac) {
-                            // No new MAC to set, safe to use
-                            device = deviceByIp;
-                        } else if (deviceByIp.getMacAddress() == null ||
-                                   deviceByIp.getMacAddress().startsWith("00:00:") ||
-                                   deviceByIp.getMacAddress().equals(macAddress)) {
-                            // Device has no MAC, has a placeholder MAC, or same MAC - safe to update
-                            device = deviceByIp;
-                        }
-                        // Otherwise, a device exists at this IP but with a different real MAC
-                        // This means the IP was reassigned - create a new device for the new MAC
+                if (device == null && deviceByIp != null) {
+                    // A device with this IP already exists
+                    if (!hasMac) {
+                        // No new MAC to set, use the existing device
+                        device = deviceByIp;
+                    } else if (deviceByIp.getMacAddress() == null ||
+                               deviceByIp.getMacAddress().startsWith("fe:00:") ||
+                               deviceByIp.getMacAddress().equals(macAddress)) {
+                        // Device has no MAC, has a placeholder MAC, or same MAC - safe to update
+                        device = deviceByIp;
+                    } else {
+                        // A device exists at this IP with a different real MAC
+                        // Skip this device to prevent duplicates
+                        skippedDevices++;
+                        String skipMsg = String.format("Skipped: IP %s (MAC: %s) - IP already assigned to device '%s' (MAC: %s)",
+                                ipAddress, macAddress, deviceByIp.getDisplayName(), deviceByIp.getMacAddress());
+                        skippedLog.append(skipMsg).append("\n");
+                        logger.info(skipMsg);
+                        processedIps.add(ipAddress);
+                        continue;
                     }
                 }
 
@@ -189,12 +204,7 @@ public class NetworkScannerService {
                             String.format("%02x", ipAddress.hashCode() & 0xff));
                 }
 
-                // If a different device existed at this IP, mark it as offline
-                // (IP was reassigned to a new device)
-                if (deviceByIp != null && device != deviceByIp) {
-                    deviceByIp.setOnline(false);
-                    deviceRepository.save(deviceByIp);
-                }
+                processedIps.add(ipAddress);
 
                 device.setIpAddress(ipAddress);
                 if (hostname != null && !hostname.isEmpty()) {
@@ -236,14 +246,21 @@ public class NetworkScannerService {
                 }
             }
 
+            // Append skipped devices log to scan log
+            if (skippedDevices > 0) {
+                String currentLog = scan.getScanLog() != null ? scan.getScanLog() : "";
+                scan.setScanLog(currentLog + "\n--- Skipped Devices (Duplicate IPs) ---\n" + skippedLog.toString());
+            }
+
             // Update scan status
             scan.setStatus("COMPLETED");
             scan.setCompletedAt(LocalDateTime.now());
-            scan.setDevicesFound(discoveredHosts.size());
+            scan.setDevicesFound(discoveredHosts.size() - skippedDevices);
             scan.setNewDevices(newDevices);
             networkScanRepository.save(scan);
 
-            logger.info("Scan completed: {} devices found, {} new", discoveredHosts.size(), newDevices);
+            logger.info("Scan completed: {} devices found, {} new, {} skipped (duplicate IPs)",
+                    discoveredHosts.size() - skippedDevices, newDevices, skippedDevices);
 
         } catch (Exception e) {
             logger.error("Error during network scan", e);
