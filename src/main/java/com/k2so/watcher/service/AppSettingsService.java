@@ -34,6 +34,15 @@ public class AppSettingsService {
         createIfNotExists("langchain4j.groq.model", "llama-3.3-70b-versatile", "Groq model name");
         createIfNotExists("langchain4j.gemini.api-key", "", "Gemini API key");
         createIfNotExists("langchain4j.gemini.model", "gemini-2.0-flash", "Gemini model name");
+
+        // Samba backup settings
+        createIfNotExists("backup.samba.enabled", "false", "Enable backup to Samba/SMB share");
+        createIfNotExists("backup.samba.host", "", "Samba server hostname or IP");
+        createIfNotExists("backup.samba.share", "", "Samba share name");
+        createIfNotExists("backup.samba.path", "", "Path within the share (e.g., /backups/k2so)");
+        createIfNotExists("backup.samba.domain", "", "Samba domain (optional)");
+        createIfNotExists("backup.samba.username", "", "Samba username");
+        createIfNotExists("backup.samba.password", "", "Samba password");
     }
 
     private void createIfNotExists(String key, String value, String description) {

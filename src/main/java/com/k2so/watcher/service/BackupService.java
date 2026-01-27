@@ -28,6 +28,7 @@ public class BackupService {
     private static final DateTimeFormatter BACKUP_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
 
     private final DataSource dataSource;
+    private final SambaBackupService sambaBackupService;
 
     @Value("${spring.datasource.url}")
     private String datasourceUrl;
@@ -38,8 +39,9 @@ public class BackupService {
     @Value("${k2so.backup.max-files:10}")
     private int maxBackupFiles;
 
-    public BackupService(DataSource dataSource) {
+    public BackupService(DataSource dataSource, SambaBackupService sambaBackupService) {
         this.dataSource = dataSource;
+        this.sambaBackupService = sambaBackupService;
     }
 
     /**
@@ -90,6 +92,16 @@ public class BackupService {
         cleanupOldBackups();
 
         logger.info("Backup created successfully: {}", backupPath);
+
+        // Copy to Samba if enabled
+        if (sambaBackupService.isEnabled()) {
+            try {
+                sambaBackupService.copyBackupToSamba(backupPath);
+            } catch (Exception e) {
+                logger.error("Failed to copy backup to Samba share (backup still saved locally)", e);
+            }
+        }
+
         return backupPath;
     }
 

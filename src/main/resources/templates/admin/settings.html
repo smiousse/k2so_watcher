@@ -140,6 +140,73 @@
                 <p class="text-muted">No backups available. Create your first backup above.</p>
             </div>
         </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Samba/SMB Backup Settings</h3>
+            </div>
+
+            <div style="padding: 1rem;">
+                <p class="text-muted mb-3">
+                    Configure a Samba/SMB network share to automatically copy backups when created.
+                </p>
+
+                <form th:action="@{/admin/settings/samba}" method="post">
+                    <div class="form-group mb-2">
+                        <label class="form-label">
+                            <input type="checkbox" name="enabled" value="true"
+                                   th:checked="${sambaEnabled}">
+                            Enable Samba backup
+                        </label>
+                    </div>
+
+                    <div class="form-group mb-2">
+                        <label class="form-label" for="sambaHost">Server Host/IP</label>
+                        <input type="text" id="sambaHost" name="host" class="form-control"
+                               th:value="${sambaHost}" placeholder="192.168.1.100 or nas.local">
+                    </div>
+
+                    <div class="form-group mb-2">
+                        <label class="form-label" for="sambaShare">Share Name</label>
+                        <input type="text" id="sambaShare" name="share" class="form-control"
+                               th:value="${sambaShare}" placeholder="backups">
+                    </div>
+
+                    <div class="form-group mb-2">
+                        <label class="form-label" for="sambaPath">Path within Share (optional)</label>
+                        <input type="text" id="sambaPath" name="path" class="form-control"
+                               th:value="${sambaPath}" placeholder="/k2so/backups">
+                    </div>
+
+                    <div class="form-group mb-2">
+                        <label class="form-label" for="sambaDomain">Domain (optional)</label>
+                        <input type="text" id="sambaDomain" name="domain" class="form-control"
+                               th:value="${sambaDomain}" placeholder="WORKGROUP">
+                    </div>
+
+                    <div class="form-group mb-2">
+                        <label class="form-label" for="sambaUsername">Username</label>
+                        <input type="text" id="sambaUsername" name="username" class="form-control"
+                               th:value="${sambaUsername}" placeholder="backupuser">
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="sambaPassword">Password</label>
+                        <input type="password" id="sambaPassword" name="password" class="form-control"
+                               th:value="${sambaPassword}" placeholder="Enter password">
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Save Samba Settings</button>
+                        <button type="button" class="btn btn-secondary" onclick="testSambaConnection()">
+                            Test Connection
+                        </button>
+                    </div>
+                </form>
+
+                <div id="samba-test-result" class="mt-2" style="display: none;"></div>
+            </div>
+        </div>
     </main>
 
     <!-- Restore Backup Modal -->
@@ -171,5 +238,53 @@
 
     <footer th:replace="~{layout/main :: footer}"></footer>
     <script th:src="@{/js/app.js}"></script>
+    <script th:inline="javascript">
+        function testSambaConnection() {
+            const host = document.getElementById('sambaHost').value;
+            const share = document.getElementById('sambaShare').value;
+            const path = document.getElementById('sambaPath').value;
+            const domain = document.getElementById('sambaDomain').value;
+            const username = document.getElementById('sambaUsername').value;
+            const password = document.getElementById('sambaPassword').value;
+
+            const resultDiv = document.getElementById('samba-test-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'mt-2 alert alert-info';
+            resultDiv.textContent = 'Testing connection...';
+
+            const csrfToken = document.querySelector('input[name="_csrf"]')?.value ||
+                              document.querySelector('meta[name="_csrf"]')?.content;
+
+            fetch('/admin/settings/samba/test', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: new URLSearchParams({
+                    host: host,
+                    share: share,
+                    path: path,
+                    domain: domain,
+                    username: username,
+                    password: password
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    resultDiv.className = 'mt-2 alert alert-success';
+                    resultDiv.textContent = data.message;
+                } else {
+                    resultDiv.className = 'mt-2 alert alert-danger';
+                    resultDiv.textContent = data.message;
+                }
+            })
+            .catch(error => {
+                resultDiv.className = 'mt-2 alert alert-danger';
+                resultDiv.textContent = 'Error testing connection: ' + error.message;
+            });
+        }
+    </script>
 </body>
 </html>

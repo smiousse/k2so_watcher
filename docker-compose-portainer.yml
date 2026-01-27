@@ -1,7 +1,7 @@
 services:
   k2so-watcher:
     build:
-      context: .
+      context: https://github.com/smiousse/k2so_watcher.git
       dockerfile: Dockerfile
     container_name: k2so-watcher
     network_mode: host

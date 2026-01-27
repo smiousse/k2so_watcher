@@ -124,6 +124,13 @@
             <version>0.36.2</version>
         </dependency>
 
+        <!-- SMB/CIFS Client for Samba Backup -->
+        <dependency>
+            <groupId>com.hierynomus</groupId>
+            <artifactId>smbj</artifactId>
+            <version>0.13.0</version>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
